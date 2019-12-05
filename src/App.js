@@ -5,43 +5,59 @@ import { Switch, Route } from "react-router-dom";
 import ShopPage from "./pages/shop/shop.component";
 import Header from "./components/header/header.component";
 import SignInAndSignUpPage from "./pages/signin-and-signup/signin-and-signup.component";
-import {auth} from './firebase/firebase.utils'
-
+import { auth, createUserProfileDocumement } from "./firebase/firebase.utils";
 
 class App extends React.Component {
   constructor(props) {
-    super(props)
-  
+    super(props);
+
     this.state = {
-       currentUser: null
-    }
+      currentUser: null
+    };
   }
 
   unsubscribeFromAuth = null;
 
+  componentDidMount() {
+    this.unsubscribeFromAuth = auth.onAuthStateChanged(async userAuth => {
+      if (userAuth) {
+        const userRef = await createUserProfileDocumement(userAuth);
 
-  componentDidMount(){
-    this.unsubscribeFromAuth = auth.onAuthStateChanged(user => {
-      this.setState({currentUser: user});
-      console.log(user);
-      
-    })
+        userRef.onSnapshot(snapShot => {
+          this.setState(
+            {
+              currentUser: {
+                id: snapShot.id,
+                ...snapShot.data()
+              }
+            },
+            () => {
+              console.log(this.state);
+            }
+          );
+        });
+
+        this.setState({ currentUser: userAuth });
+      }
+
+      // this.setState({currentUser: user});
+    });
   }
-  componentWillUnmount(){
+  componentWillUnmount() {
     this.unsubscribeFromAuth();
   }
 
-  render(){
-  return (
-    <div>
-      <Header currentUser={this.state.currentUser}/>
-      <Switch>
-        <Route exact path="/" component={HomePage} />
-        <Route path="/shop" component={ShopPage} />
-        <Route path="/signin" component={SignInAndSignUpPage} />
-      </Switch>
-    </div>
-  );
+  render() {
+    return (
+      <div>
+        <Header currentUser={this.state.currentUser} />
+        <Switch>
+          <Route exact path="/" component={HomePage} />
+          <Route path="/shop" component={ShopPage} />
+          <Route path="/signin" component={SignInAndSignUpPage} />
+        </Switch>
+      </div>
+    );
   }
 }
 
